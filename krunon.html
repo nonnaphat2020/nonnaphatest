@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ระบบห้องเรียนออนไลน์ Krunon</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',sans-serif;background:#f0f4f8;color:#2d3748}
+  .app{display:flex;flex-direction:column;height:100vh}
+  .topbar{background:linear-gradient(135deg,#667eea,#764ba2);color:white;padding:0 20px;display:flex;align-items:center;height:56px;gap:12px;box-shadow:0 2px 8px rgba(0,0,0,0.2);flex-shrink:0}
+  .topbar .logo{font-size:20px}.topbar .sys-name{font-size:15px;font-weight:700;flex:1}
+  .topbar .classroom-name{font-size:13px;background:rgba(255,255,255,0.2);padding:4px 12px;border-radius:20px}
+  .main{display:flex;flex:1;overflow:hidden}
+  .sidebar{width:200px;background:#2d3748;color:white;display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto}
+  .sidebar-title{padding:16px;font-size:11px;text-transform:uppercase;color:#a0aec0;letter-spacing:1px}
+  .menu-btn{display:flex;align-items:center;gap:10px;padding:12px 16px;cursor:pointer;border:none;background:none;color:#e2e8f0;width:100%;text-align:left;font-size:13px;transition:background 0.2s}
+  .menu-btn:hover{background:rgba(255,255,255,0.1)}.menu-btn.active{background:linear-gradient(135deg,#667eea,#764ba2)}
+  .menu-btn .icon{font-size:16px;width:20px}
+  .content{flex:1;overflow-y:auto;padding:20px}
+  .card{background:white;border-radius:12px;padding:20px;box-shadow:0 2px 8px rgba(0,0,0,0.06)}
+  .card-title{font-size:14px;font-weight:700;color:#4a5568;margin-bottom:16px}
+  .stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:20px}
+  .stat-card{background:white;border-radius:12px;padding:16px;box-shadow:0 2px 8px rgba(0,0,0,0.06);border-left:4px solid}
+  .stat-card.blue{border-color:#667eea}.stat-card.green{border-color:#48bb78}.stat-card.orange{border-color:#ed8936}.stat-card.purple{border-color:#9f7aea}
+  .stat-num{font-size:28px;font-weight:800}.stat-label{font-size:12px;color:#718096;margin-top:2px}
+  .charts-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
+  .table-wrap{overflow-x:auto}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th{background:#edf2f7;padding:10px 12px;text-align:left;font-weight:600;color:#4a5568}
+  td{padding:10px 12px;border-bottom:1px solid #edf2f7}
+  tr:hover td{background:#f7fafc}
+  .badge{padding:3px 8px;border-radius:20px;font-size:11px;font-weight:600}
+  .badge-blue{background:#ebf4ff;color:#3182ce}.badge-green{background:#f0fff4;color:#38a169}.badge-orange{background:#fffaf0;color:#dd6b20}
+  .filter-bar{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center}
+  .filter-bar input,.filter-bar select{padding:8px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;background:white}
+  .btn{padding:8px 16px;border-radius:8px;border:none;cursor:pointer;font-size:13px;font-weight:600;transition:all 0.2s}
+  .btn-primary{background:linear-gradient(135deg,#667eea,#764ba2);color:white}.btn-primary:hover{opacity:0.9}
+  .btn-danger{background:#fed7d7;color:#c53030}.btn-success{background:#c6f6d5;color:#276749}
+  .btn-sm{padding:4px 10px;font-size:12px}.btn-outline{background:white;border:1px solid #e2e8f0;color:#4a5568}
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:100;display:flex;align-items:center;justify-content:center}
+  .modal{background:white;border-radius:16px;padding:24px;width:500px;max-width:95vw;max-height:90vh;overflow-y:auto}
+  .modal h3{font-size:16px;font-weight:700;margin-bottom:20px}
+  .form-group{margin-bottom:14px}
+  .form-group label{display:block;font-size:12px;font-weight:600;color:#4a5568;margin-bottom:6px}
+  .form-group input,.form-group select,.form-group textarea{width:100%;padding:9px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:inherit}
+  .modal-footer{display:flex;gap:10px;justify-content:flex-end;margin-top:20px}
+  .login-wrap{display:flex;align-items:center;justify-content:center;min-height:100%}
+  .login-card{background:white;border-radius:16px;padding:32px;width:380px;box-shadow:0 8px 32px rgba(0,0,0,0.1);text-align:center}
+  .login-icon{font-size:48px;margin-bottom:12px}.login-title{font-size:20px;font-weight:700;margin-bottom:4px}
+  .login-sub{font-size:13px;color:#718096;margin-bottom:24px}.login-card .form-group{text-align:left}
+  .error-msg{color:#c53030;font-size:12px;margin-top:8px}
+  .exam-question{background:#f7fafc;border-radius:12px;padding:16px;margin-bottom:16px}
+  .q-num{font-size:12px;font-weight:700;color:#667eea;margin-bottom:6px}
+  .q-text{font-size:14px;margin-bottom:12px}
+  .draw-canvas{border:2px dashed #cbd5e0;border-radius:8px;width:100%;background:white;touch-action:none;cursor:crosshair;display:block}
+  .section-title{font-size:16px;font-weight:700;margin-bottom:16px}
+  .exam-card{background:white;border-radius:12px;padding:16px;margin-bottom:12px;box-shadow:0 2px 8px rgba(0,0,0,0.06);display:flex;align-items:center;justify-content:space-between;cursor:pointer;transition:all 0.2s}
+  .exam-card:hover{transform:translateY(-2px);box-shadow:0 4px 16px rgba(0,0,0,0.1)}
+  .exam-card-info h4{font-size:14px;font-weight:700}.exam-card-info p{font-size:12px;color:#718096;margin-top:2px}
+  .page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+  .page-header h2{font-size:18px;font-weight:700}
+  .timer-bar{background:#fff3cd;border:1px solid #ffc107;border-radius:8px;padding:10px 16px;margin-bottom:16px;display:flex;align-items:center;gap:10px;font-weight:600}
+  .pagination{display:flex;gap:6px;margin-top:16px;justify-content:flex-end;flex-wrap:wrap}
+  .page-btn{width:32px;height:32px;border-radius:8px;border:1px solid #e2e8f0;background:white;cursor:pointer;font-size:13px}
+  .page-btn.active{background:#667eea;color:white;border-color:#667eea}
+  .loading{display:flex;align-items:center;justify-content:center;height:200px;gap:10px;color:#718096}
+  .spinner{width:20px;height:20px;border:3px solid #e2e8f0;border-top-color:#667eea;border-radius:50%;animation:spin 0.7s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .toast{position:fixed;bottom:24px;right:24px;padding:12px 20px;border-radius:10px;font-size:13px;font-weight:600;z-index:999;box-shadow:0 4px 16px rgba(0,0,0,0.15);animation:fadeIn 0.3s}
+  .toast.success{background:#276749;color:white}.toast.error{background:#c53030;color:white}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+  .flex{display:flex}.gap-2{gap:8px}.text-center{text-align:center}.text-sm{font-size:13px}.text-gray{color:#718096}.mb-3{margin-bottom:12px}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <span class="logo">🏫</span>
+    <span class="sys-name">ระบบสอบออนไลน์</span>
+    <span class="classroom-name">ห้องเรียน Krunon</span>
+  </div>
+  <div class="main">
+    <div class="sidebar">
+      <div class="sidebar-title">เมนูหลัก</div>
+      <button class="menu-btn active" onclick="switchMenu('home')" id="m-home"><span class="icon">🏠</span> หน้าแรก</button>
+      <button class="menu-btn" onclick="switchMenu('exam')" id="m-exam"><span class="icon">📝</span> ทำข้อสอบ</button>
+      <button class="menu-btn" onclick="switchMenu('scores')" id="m-scores"><span class="icon">📊</span> ดูคะแนนสอบ</button>
+      <button class="menu-btn" onclick="switchMenu('admin')" id="m-admin"><span class="icon">⚙️</span> ผู้ดูแลระบบ</button>
+    </div>
+    <div class="content" id="content"></div>
+  </div>
+</div>
+<div id="modalContainer"></div>
+<div id="toastContainer"></div>
+
+<script>
+// ── CONFIG ──────────────────────────────────────────────
+const SB_URL = 'https://aeshboivuwpphfpmrpsj.supabase.co/rest/v1';
+const SB_KEY = 'sb_publishable_7acFi7pleIG3QG6jpojtwg_O6XUYdQP';
+const ADMIN_PASS = 'non2568';
+const CLASSES = ['ป.1','ป.2','ป.3','ป.4','ป.5','ป.6'];
+
+// ── SUPABASE FETCH HELPERS ───────────────────────────────
+function sbHeaders(extra={}) {
+  return {'Content-Type':'application/json','apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Prefer':'return=representation',...extra};
+}
+async function sbGet(table, params='') {
+  const r = await fetch(`${SB_URL}/${table}?${params}`, {headers: sbHeaders()});
+  const d = await r.json();
+  if(!r.ok) throw new Error(d.message || d.hint || JSON.stringify(d));
+  return d;
+}
+async function sbGetCount(table, params='') {
+  const r = await fetch(`${SB_URL}/${table}?select=*&${params}`, {headers: sbHeaders({'Prefer':'count=exact','Range':'0-0'})});
+  const count = parseInt(r.headers.get('content-range')?.split('/')[1] ?? '0');
+  return count;
+}
+async function sbInsert(table, row) {
+  const r = await fetch(`${SB_URL}/${table}`, {method:'POST', headers: sbHeaders(), body: JSON.stringify(row)});
+  const d = await r.json();
+  if(!r.ok) throw new Error(d.message || d.hint || JSON.stringify(d));
+  return d;
+}
+async function sbUpdate(table, filter, vals) {
+  const r = await fetch(`${SB_URL}/${table}?${filter}`, {method:'PATCH', headers: sbHeaders(), body: JSON.stringify(vals)});
+  const d = await r.json();
+  if(!r.ok) throw new Error(d.message || d.hint || JSON.stringify(d));
+  return d;
+}
+async function sbDelete(table, filter) {
+  const r = await fetch(`${SB_URL}/${table}?${filter}`, {method:'DELETE', headers: sbHeaders({'Prefer':'return=minimal'})});
+  if(!r.ok) { const d = await r.json(); throw new Error(d.message || JSON.stringify(d)); }
+}
+
+// ── UI STATE ─────────────────────────────────────────────
+const ui = {
+  menu:'home', adminLoggedIn:false, scoresLoggedIn:false,
+  examLoggedIn:false, examStudent:null, examSubmitted:{},
+  currentExam:null, examTimer:null, examTimeLeft:0,
+  charts:{}, adminSub:'students',
+  scoresFilter:{subject:'',cls:''}, scoresExamSet:'', scoresPage:1,
+};
+
+// ── TOAST ────────────────────────────────────────────────
+function toast(msg, type='success') {
+  const el = document.createElement('div');
+  el.className = `toast ${type}`; el.textContent = msg;
+  document.getElementById('toastContainer').appendChild(el);
+  setTimeout(() => el.remove(), 3500);
+}
+
+function loading() {
+  return `<div class="loading"><div class="spinner"></div> กำลังโหลด...</div>`;
+}
+
+// ── ROUTER ───────────────────────────────────────────────
+function switchMenu(m) {
+  ui.menu = m;
+  document.querySelectorAll('.menu-btn').forEach(b => b.classList.remove('active'));
+  const btn = document.getElementById('m-'+m); if(btn) btn.classList.add('active');
+  renderContent();
+}
+
+function renderContent() {
+  Object.values(ui.charts).forEach(c => { try{c.destroy()}catch(e){} }); ui.charts = {};
+  const c = document.getElementById('content');
+  if(ui.menu==='home')       { c.innerHTML = loading(); loadHome(); }
+  else if(ui.menu==='exam')  { c.innerHTML = ui.examLoggedIn ? loading() : renderLoginPage('exam'); if(ui.examLoggedIn) loadExamList(); }
+  else if(ui.menu==='scores'){ c.innerHTML = ui.scoresLoggedIn ? loading() : renderLoginPage('scores'); if(ui.scoresLoggedIn) loadScoresPage(); }
+  else if(ui.menu==='admin') { ui.adminLoggedIn ? renderAdminPanel() : (c.innerHTML = renderLoginPage('admin')); }
+}
+
+function renderLoginPage(type) {
+  const map = {
+    exam:   {icon:'📝', title:'ทำข้อสอบ',      sub:'กรอกเลขประจำตัวนักเรียน', label:'เลขประจำตัวนักเรียน', id:'loginInput', btn:'examLogin()',    pass:false},
+    scores: {icon:'📊', title:'ดูคะแนนสอบ',    sub:'กรอกรหัสผ่านเพื่อเข้าสู่ระบบ', label:'รหัสผ่าน',  id:'loginInput', btn:'doLogin("scores")', pass:true},
+    admin:  {icon:'⚙️', title:'ผู้ดูแลระบบ',   sub:'กรอกรหัสผ่านเพื่อเข้าสู่ระบบ', label:'รหัสผ่าน',  id:'loginInput', btn:'doLogin("admin")',  pass:true},
+  };
+  const m = map[type];
+  return `<div class="login-wrap"><div class="login-card">
+    <div class="login-icon">${m.icon}</div>
+    <div class="login-title">${m.title}</div>
+    <div class="login-sub">${m.sub}</div>
+    <div class="form-group" style="text-align:left"><label>${m.label}</label>
+      <input type="${m.pass?'password':'text'}" id="loginInput" placeholder="${m.label}" onkeydown="if(event.key==='Enter')${m.btn}">
+    </div>
+    <div id="loginErr" class="error-msg"></div>
+    <button class="btn btn-primary" style="width:100%;margin-top:8px" onclick="${m.btn}">เข้าสู่ระบบ</button>
+  </div></div>`;
+}
+
+// ── LOGIN ────────────────────────────────────────────────
+async function examLogin() {
+  const id = document.getElementById('loginInput').value.trim();
+  try {
+    const rows = await sbGet('students', `id=eq.${id}&limit=1`);
+    if(!rows.length) { document.getElementById('loginErr').textContent = 'ไม่พบเลขประจำตัวนักเรียน'; return; }
+    ui.examLoggedIn = true; ui.examStudent = rows[0]; renderContent();
+  } catch(e) { document.getElementById('loginErr').textContent = e.message; }
+}
+
+function doLogin(type) {
+  const val = document.getElementById('loginInput').value;
+  if(val !== ADMIN_PASS) { document.getElementById('loginErr').textContent = 'รหัสผ่านไม่ถูกต้อง'; return; }
+  if(type==='scores') ui.scoresLoggedIn = true;
+  if(type==='admin')  ui.adminLoggedIn  = true;
+  renderContent();
+}
+
+// ── HOME ─────────────────────────────────────────────────
+async function loadHome() {
+  try {
+    const [students, exams, subCount] = await Promise.all([
+      sbGet('students','select=*&order=id'),
+      sbGet('exams','select=id,subject,approved,class'),
+      sbGetCount('submissions'),
+    ]);
+    const approved = exams.filter(e=>e.approved).length;
+    const classCount = {}; CLASSES.forEach(c => classCount[c] = students.filter(s=>s.student_class===c).length);
+    const subjects = {}; exams.forEach(e => subjects[e.subject] = (subjects[e.subject]||0)+1);
+    window._allStudents = students;
+
+    document.getElementById('content').innerHTML = `
+    <div>
+      <div class="stats-row">
+        <div class="stat-card blue"><div class="stat-num">${students.length}</div><div class="stat-label">นักเรียนทั้งหมด</div></div>
+        <div class="stat-card green"><div class="stat-num">${approved}</div><div class="stat-label">ชุดข้อสอบที่อนุมัติ</div></div>
+        <div class="stat-card orange"><div class="stat-num">${subCount}</div><div class="stat-label">การสอบทั้งหมด</div></div>
+        <div class="stat-card purple"><div class="stat-num">${exams.length}</div><div class="stat-label">รายวิชาทั้งหมด</div></div>
+      </div>
+      <div class="charts-row">
+        <div class="card"><div class="card-title">📊 นักเรียนแยกตามชั้น</div><canvas id="chartBar" height="180"></canvas></div>
+        <div class="card"><div class="card-title">🥧 สัดส่วนข้อสอบตามวิชา</div><canvas id="chartPie" height="180"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-title">👥 รายชื่อนักเรียนทั้งหมด</div>
+        <div class="filter-bar">
+          <input type="text" id="filterName" placeholder="🔍 ค้นหาชื่อ..." oninput="filterStudents()" style="flex:1;min-width:150px">
+          <select id="filterCls" onchange="filterStudents()">
+            <option value="">-- ทุกชั้น --</option>${CLASSES.map(c=>`<option>${c}</option>`).join('')}
+          </select>
+        </div>
+        <div class="table-wrap"><table><thead><tr><th>#</th><th>เลขประจำตัว</th><th>ชื่อ-สกุล</th><th>ชั้น</th></tr></thead>
+        <tbody id="stuTbody">${stuRows(students)}</tbody></table></div>
+      </div>
+    </div>`;
+
+    // Charts
+    ui.charts.bar = new Chart(document.getElementById('chartBar'), {
+      type:'bar', data:{labels:CLASSES, datasets:[{label:'นักเรียน', data:CLASSES.map(c=>classCount[c]), backgroundColor:['#667eea','#764ba2','#48bb78','#ed8936','#f6e05e','#fc8181'], borderRadius:8}]},
+      options:{responsive:true, plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true, ticks:{stepSize:1}}}}
+    });
+    if(Object.keys(subjects).length) {
+      ui.charts.pie = new Chart(document.getElementById('chartPie'), {
+        type:'doughnut', data:{labels:Object.keys(subjects), datasets:[{data:Object.values(subjects), backgroundColor:['#667eea','#764ba2','#48bb78','#ed8936','#f6e05e','#fc8181']}]},
+        options:{responsive:true, plugins:{legend:{position:'bottom'}}}
+      });
+    }
+  } catch(e) { document.getElementById('content').innerHTML = `<div class="card"><p class="text-gray">โหลดไม่สำเร็จ: ${e.message}</p></div>`; }
+}
+
+function stuRows(arr) {
+  if(!arr.length) return `<tr><td colspan="4" class="text-center text-gray" style="padding:20px">ไม่พบข้อมูล</td></tr>`;
+  return arr.map((s,i)=>`<tr><td>${i+1}</td><td><span class="badge badge-blue">${s.id}</span></td><td>${s.name}</td><td><span class="badge badge-green">${s.student_class}</span></td></tr>`).join('');
+}
+function filterStudents() {
+  const name = document.getElementById('filterName').value.toLowerCase();
+  const cls  = document.getElementById('filterCls').value;
+  document.getElementById('stuTbody').innerHTML = stuRows((window._allStudents||[]).filter(s=>s.name.toLowerCase().includes(name)&&(!cls||s.student_class===cls)));
+}
+
+// ── EXAM LIST ────────────────────────────────────────────
+async function loadExamList() {
+  try {
+    const exams = await sbGet('exams','select=*&approved=eq.true');
+    const s = ui.examStudent;
+    const byClass = {};
+    exams.forEach(e => { if(!byClass[e.class]) byClass[e.class]=[]; byClass[e.class].push(e); });
+    let html = `<div class="page-header"><h2>📝 รายการข้อสอบ</h2><div class="text-sm text-gray">ยินดีต้อนรับ: <strong>${s.name}</strong> (${s.student_class})</div></div>`;
+    Object.keys(byClass).sort().forEach(cls => {
+      html += `<div style="margin-bottom:20px"><div class="section-title">🏫 ชั้น ${cls}</div>`;
+      byClass[cls].forEach(e => {
+        const done = ui.examSubmitted[s.id+'_'+e.id];
+        html += `<div class="exam-card" onclick="${done?'':` startExam('${e.id}')`}" style="${done?'opacity:0.6;cursor:not-allowed':''}">
+          <div class="exam-card-info"><h4>${e.subject}</h4><p>ครูผู้สอน: ${e.teacher} | ชั้น ${e.class} | เวลา ${e.time} นาที | ${(e.questions||[]).length} ข้อ</p></div>
+          <span class="badge ${done?'badge-orange':'badge-green'}">${done?'ส่งแล้ว':'เริ่มสอบ →'}</span>
+        </div>`;
+      });
+      html += `</div>`;
+    });
+    html += `<button class="btn btn-outline" onclick="ui.examLoggedIn=false;ui.examStudent=null;renderContent()">← ออกจากระบบ</button>`;
+    document.getElementById('content').innerHTML = html;
+  } catch(e) { document.getElementById('content').innerHTML = `<p class="text-gray">โหลดไม่สำเร็จ: ${e.message}</p>`; }
+}
+
+// ── EXAM TAKING ──────────────────────────────────────────
+async function startExam(examId) {
+  const rows = await sbGet('exams', `id=eq.${examId}&limit=1`);
+  if(!rows.length) return;
+  ui.currentExam = rows[0]; ui.examTimeLeft = rows[0].time * 60;
+  document.getElementById('content').innerHTML = renderExamPage(rows[0]);
+  initCanvases(); startTimer();
+}
+
+function renderExamPage(exam) {
+  let html = `<div><div class="page-header"><h2>📝 ${exam.subject} — ชั้น ${exam.class}</h2><div class="text-sm text-gray">ครูผู้สอน: ${exam.teacher}</div></div>
+  <div class="timer-bar" id="timerBar">⏱ เวลาที่เหลือ: <span id="timerText">${exam.time}:00</span></div>`;
+  (exam.questions||[]).forEach((q,i) => {
+    html += `<div class="exam-question"><div class="q-num">ข้อที่ ${i+1}</div><div class="q-text">${q.text}</div>
+      ${q.image?`<img src="${q.image}" style="max-width:100%;border-radius:8px;margin-bottom:10px">` : ''}
+      <canvas id="dc_${i}" class="draw-canvas"></canvas>
+      <div style="margin-top:8px;display:flex;gap:8px">
+        <button class="btn btn-sm btn-outline" onclick="clearCanvas(${i})">🗑 ล้าง</button>
+        <select id="ps_${i}" style="padding:4px 8px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px">
+          <option value="2">เล็ก</option><option value="4" selected>กลาง</option><option value="8">ใหญ่</option>
+        </select>
+        <input type="color" id="pc_${i}" value="#1a1a2e" style="width:36px;height:28px;padding:0;border:1px solid #e2e8f0;border-radius:6px;cursor:pointer">
+      </div></div>`;
+  });
+  html += `<div style="text-align:center;margin-top:24px"><button class="btn btn-primary" style="padding:12px 40px;font-size:15px" onclick="submitExam('${exam.id}')">✅ ส่งข้อสอบ</button></div></div>`;
+  return html;
+}
+
+function initCanvases() {
+  (ui.currentExam.questions||[]).forEach((q,i) => {
+    const cv = document.getElementById(`dc_${i}`); if(!cv) return;
+    const ctx = cv.getContext('2d');
+    if(q.image) {
+      const img = new Image();
+      img.onload = () => { cv.width=img.naturalWidth; cv.height=img.naturalHeight; cv.style.width='100%'; cv.style.height='auto'; ctx.drawImage(img,0,0); setupDraw(cv,i); };
+      img.src = q.image;
+    } else {
+      cv.width=700; cv.height=200; cv.style.width='100%'; cv.style.height='auto';
+      ctx.fillStyle='#f8f9fa'; ctx.fillRect(0,0,700,200);
+      ctx.fillStyle='#cbd5e0'; ctx.font='16px Segoe UI'; ctx.fillText('เขียนคำตอบที่นี่...',16,40);
+      setupDraw(cv,i);
+    }
+  });
+}
+
+function setupDraw(cv, i) {
+  let dn=false, lx=0, ly=0;
+  const pos = e => { const r=cv.getBoundingClientRect(),sx=cv.width/r.width,sy=cv.height/r.height,s=e.touches?e.touches[0]:e; return {x:(s.clientX-r.left)*sx,y:(s.clientY-r.top)*sy}; };
+  cv.addEventListener('mousedown',  e=>{dn=true;const p=pos(e);lx=p.x;ly=p.y;e.preventDefault();});
+  cv.addEventListener('touchstart', e=>{dn=true;const p=pos(e);lx=p.x;ly=p.y;e.preventDefault();},{passive:false});
+  cv.addEventListener('mousemove',  e=>{if(!dn)return;const p=pos(e),ctx=cv.getContext('2d');ctx.beginPath();ctx.moveTo(lx,ly);ctx.lineTo(p.x,p.y);ctx.strokeStyle=document.getElementById(`pc_${i}`)?.value||'#1a1a2e';ctx.lineWidth=parseFloat(document.getElementById(`ps_${i}`)?.value||4);ctx.lineCap='round';ctx.stroke();lx=p.x;ly=p.y;});
+  cv.addEventListener('touchmove',  e=>{if(!dn)return;e.preventDefault();const p=pos(e),ctx=cv.getContext('2d');ctx.beginPath();ctx.moveTo(lx,ly);ctx.lineTo(p.x,p.y);ctx.strokeStyle=document.getElementById(`pc_${i}`)?.value||'#1a1a2e';ctx.lineWidth=parseFloat(document.getElementById(`ps_${i}`)?.value||4);ctx.lineCap='round';ctx.stroke();lx=p.x;ly=p.y;},{passive:false});
+  cv.addEventListener('mouseup',  ()=>dn=false);
+  cv.addEventListener('touchend', ()=>dn=false);
+}
+
+function clearCanvas(i) {
+  const cv=document.getElementById(`dc_${i}`); if(!cv) return;
+  const ctx=cv.getContext('2d'), q=ui.currentExam?.questions[i];
+  if(q?.image){const img=new Image();img.onload=()=>{cv.width=img.naturalWidth;cv.height=img.naturalHeight;ctx.drawImage(img,0,0);};img.src=q.image;}
+  else{ctx.fillStyle='#f8f9fa';ctx.fillRect(0,0,cv.width,cv.height);ctx.fillStyle='#cbd5e0';ctx.font='16px Segoe UI';ctx.fillText('เขียนคำตอบที่นี่...',16,40);}
+}
+
+function startTimer() {
+  if(ui.examTimer) clearInterval(ui.examTimer);
+  ui.examTimer = setInterval(() => {
+    ui.examTimeLeft--;
+    const m=Math.floor(ui.examTimeLeft/60), s=ui.examTimeLeft%60;
+    const el=document.getElementById('timerText'); if(el) el.textContent=`${m}:${s.toString().padStart(2,'0')}`;
+    const bar=document.getElementById('timerBar'); if(bar){if(ui.examTimeLeft<=60)bar.style.background='#fed7d7';else if(ui.examTimeLeft<=300)bar.style.background='#fefcbf';}
+    if(ui.examTimeLeft<=0){clearInterval(ui.examTimer);submitExam(ui.currentExam?.id);}
+  },1000);
+}
+
+async function submitExam(examId) {
+  clearInterval(ui.examTimer);
+  const answers={};
+  (ui.currentExam.questions||[]).forEach((_,i)=>{const cv=document.getElementById(`dc_${i}`);if(cv)answers[i]=cv.toDataURL('image/png');});
+  try {
+    await sbInsert('submissions',{id:'sub_'+Date.now(), student_id:ui.examStudent.id, exam_id:examId, answers, score:null});
+    ui.examSubmitted[ui.examStudent.id+'_'+examId]=true;
+    document.getElementById('content').innerHTML=`<div style="text-align:center;padding:60px 20px">
+      <div style="font-size:64px;margin-bottom:16px">✅</div>
+      <h2 style="font-size:22px;margin-bottom:8px">ส่งข้อสอบเรียบร้อยแล้ว!</h2>
+      <p class="text-gray" style="margin-bottom:24px">ครูจะตรวจและประกาศผลในภายหลัง</p>
+      <button class="btn btn-primary" onclick="ui.currentExam=null;renderContent()">← กลับหน้าหลัก</button></div>`;
+  } catch(e) { toast('ส่งข้อสอบไม่สำเร็จ: '+e.message,'error'); }
+}
+
+// ── SCORES PAGE ──────────────────────────────────────────
+let _scoreCache = {};
+
+async function loadScoresPage() {
+  try {
+    const [subs, exams, students] = await Promise.all([
+      sbGet('submissions','select=*&order=submitted_at.desc'),
+      sbGet('exams','select=id,subject,teacher,year,class,questions'),
+      sbGet('students','select=id,name,student_class'),
+    ]);
+    _scoreCache = {subs, exams, students};
+    renderScoresTable();
+  } catch(e) { document.getElementById('content').innerHTML=`<p class="text-gray">โหลดไม่สำเร็จ: ${e.message}</p>`; }
+}
+
+function renderScoresTable() {
+  const {subs=[],exams=[],students=[]} = _scoreCache;
+  let rows = subs.map(sub => {
+    const st = students.find(s=>s.id===sub.student_id)||{id:sub.student_id,name:'ไม่ทราบ',student_class:'-'};
+    const ex = exams.find(e=>e.id===sub.exam_id)||{subject:'-',teacher:'-',year:'-',questions:[],id:sub.exam_id};
+    return {subId:sub.id,studentId:st.id,studentName:st.name,studentClass:st.student_class,subject:ex.subject,teacher:ex.teacher,year:ex.year,examId:sub.exam_id,score:sub.score,total:(ex.questions||[]).length};
+  });
+  if(ui.scoresExamSet) rows=rows.filter(r=>r.examId===ui.scoresExamSet);
+  if(ui.scoresFilter.subject) rows=rows.filter(r=>r.subject===ui.scoresFilter.subject);
+  if(ui.scoresFilter.cls) rows=rows.filter(r=>r.studentClass===ui.scoresFilter.cls);
+  const tp=Math.max(1,Math.ceil(rows.length/10));
+  ui.scoresPage=Math.min(ui.scoresPage,tp);
+  const pr=rows.slice((ui.scoresPage-1)*10,ui.scoresPage*10);
+  const subjects=[...new Set(exams.map(e=>e.subject))];
+
+  document.getElementById('content').innerHTML=`<div>
+    <div class="page-header"><h2>📊 ดูคะแนนสอบ</h2><button class="btn btn-outline btn-sm" onclick="ui.scoresLoggedIn=false;renderContent()">ออกจากระบบ</button></div>
+    <div class="card mb-3">
+      <div class="card-title">🗂 เลือกชุดข้อสอบ</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn ${!ui.scoresExamSet?'btn-primary':'btn-outline'} btn-sm" onclick="ui.scoresExamSet='';ui.scoresPage=1;renderScoresTable()">ทั้งหมด</button>
+        ${exams.map(e=>`<button class="btn ${ui.scoresExamSet===e.id?'btn-primary':'btn-outline'} btn-sm" onclick="ui.scoresExamSet='${e.id}';ui.scoresPage=1;renderScoresTable()">${e.subject} ${e.class} (${e.year})</button>`).join('')}
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">📋 ตารางคะแนน</div>
+      <div class="filter-bar">
+        <select onchange="ui.scoresFilter.subject=this.value;ui.scoresPage=1;renderScoresTable()">
+          <option value="">-- ทุกวิชา --</option>${subjects.map(s=>`<option ${ui.scoresFilter.subject===s?'selected':''}>${s}</option>`).join('')}
+        </select>
+        <select onchange="ui.scoresFilter.cls=this.value;ui.scoresPage=1;renderScoresTable()">
+          <option value="">-- ทุกชั้น --</option>${CLASSES.map(c=>`<option ${ui.scoresFilter.cls===c?'selected':''}>${c}</option>`).join('')}
+        </select>
+      </div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>เลขประจำตัว</th><th>ชื่อ-สกุล</th><th>วิชา</th><th>ครูผู้สอน</th><th>ปีการศึกษา</th><th>คะแนน</th><th>จัดการ</th></tr></thead>
+        <tbody>${pr.length?pr.map(r=>`<tr>
+          <td><span class="badge badge-blue">${r.studentId}</span></td><td>${r.studentName}</td><td>${r.subject}</td><td>${r.teacher}</td><td>${r.year}</td>
+          <td>${r.score!==null?`<span class="badge badge-green">${r.score}/${r.total}</span>`:`<span class="badge badge-orange">รอตรวจ</span>`}</td>
+          <td><div class="flex gap-2">
+            <button class="btn btn-sm btn-outline" onclick="viewScore('${r.subId}')">ดู</button>
+            <button class="btn btn-sm btn-danger" onclick="deleteScore('${r.subId}')">ลบ</button>
+          </div></td></tr>`).join(''):`<tr><td colspan="7" class="text-center text-gray" style="padding:20px">ไม่พบข้อมูล</td></tr>`}</tbody>
+      </table></div>
+      ${tp>1?`<div class="pagination">${Array.from({length:tp},(_,i)=>`<button class="page-btn ${ui.scoresPage===i+1?'active':''}" onclick="ui.scoresPage=${i+1};renderScoresTable()">${i+1}</button>`).join('')}</div>`:''}
+      <div style="margin-top:16px"><button class="btn btn-primary" onclick="downloadPDF()">⬇️ ดาวน์โหลด PDF</button></div>
+    </div>
+  </div>`;
+}
+
+async function viewScore(subId) {
+  const sub = _scoreCache.subs?.find(s=>s.id===subId); if(!sub) return;
+  const exRows = await sbGet('exams',`id=eq.${sub.exam_id}&limit=1`);
+  const exam = exRows[0];
+  const student = _scoreCache.students?.find(s=>s.id===sub.student_id);
+  let html=`<p class="text-gray text-sm" style="margin-bottom:16px">วิชา: ${exam?.subject} | นักเรียน: ${student?.name}</p>`;
+  (exam?.questions||[]).forEach((q,i)=>{
+    html+=`<div style="margin-bottom:16px;padding:12px;background:#f7fafc;border-radius:8px">
+      <div style="font-size:13px;font-weight:700;margin-bottom:6px">ข้อ ${i+1}: ${q.text}</div>
+      ${sub.answers?.[i]?`<img src="${sub.answers[i]}" style="max-width:100%;border-radius:6px;border:1px solid #e2e8f0">`:'<span class="text-gray text-sm">ไม่มีคำตอบ</span>'}
+    </div>`;
+  });
+  html+=`<div style="margin-top:16px;padding:12px;background:#f0fff4;border-radius:8px">
+    <label style="font-size:13px;font-weight:600">ให้คะแนน:</label>
+    <input type="number" id="gradeInput" value="${sub.score??''}" min="0" max="${(exam?.questions||[]).length}" style="width:80px;padding:6px;border:1px solid #e2e8f0;border-radius:6px;margin:0 8px">
+    <span class="text-gray text-sm">/ ${(exam?.questions||[]).length} คะแนน</span>
+    <button class="btn btn-success btn-sm" style="margin-left:8px" onclick="saveScore('${subId}')">บันทึกคะแนน</button>
+  </div>`;
+  showModal('ตรวจและให้คะแนน', html, null, 600);
+}
+
+async function saveScore(subId) {
+  const val=parseInt(document.getElementById('gradeInput').value); if(isNaN(val)) return;
+  try {
+    await sbUpdate('submissions',`id=eq.${subId}`,{score:val});
+    const sub=_scoreCache.subs?.find(s=>s.id===subId); if(sub) sub.score=val;
+    toast('บันทึกคะแนนแล้ว ✅'); closeModal(); renderScoresTable();
+  } catch(e) { toast('บันทึกไม่สำเร็จ: '+e.message,'error'); }
+}
+
+async function deleteScore(subId) {
+  if(!confirm('ต้องการลบรายการนี้?')) return;
+  try {
+    await sbDelete('submissions',`id=eq.${subId}`);
+    if(_scoreCache.subs) _scoreCache.subs=_scoreCache.subs.filter(s=>s.id!==subId);
+    toast('ลบแล้ว'); renderScoresTable();
+  } catch(e) { toast('ลบไม่สำเร็จ','error'); }
+}
+
+function downloadPDF() {
+  const {subs=[],exams=[],students=[]}=_scoreCache;
+  let rows=subs.map(sub=>{
+    const st=students.find(s=>s.id===sub.student_id)||{id:sub.student_id,name:'ไม่ทราบ'};
+    const ex=exams.find(e=>e.id===sub.exam_id)||{subject:'-',teacher:'-',year:'-',questions:[]};
+    return {...st,subject:ex.subject,teacher:ex.teacher,year:ex.year,score:sub.score,total:(ex.questions||[]).length,examId:sub.exam_id};
+  });
+  if(ui.scoresExamSet) rows=rows.filter(r=>r.examId===ui.scoresExamSet);
+  if(ui.scoresFilter.subject) rows=rows.filter(r=>r.subject===ui.scoresFilter.subject);
+  if(ui.scoresFilter.cls) rows=rows.filter(r=>r.student_class===ui.scoresFilter.cls);
+  const label=ui.scoresExamSet?(exams.find(e=>e.id===ui.scoresExamSet)?.subject||''):'ทั้งหมด';
+  const win=window.open('','_blank');
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>รายงานคะแนน</title>
+    <style>body{font-family:'Segoe UI',sans-serif;padding:20px}h2{margin-bottom:16px}table{width:100%;border-collapse:collapse;font-size:13px}th{background:#edf2f7;padding:8px;text-align:left}td{padding:8px;border-bottom:1px solid #e2e8f0}@media print{button{display:none}}</style>
+    </head><body>
+    <h2>รายงานคะแนนสอบ — ${label}</h2>
+    <p style="color:#718096;margin-bottom:16px">วันที่พิมพ์: ${new Date().toLocaleDateString('th-TH')}</p>
+    <button onclick="window.print()" style="padding:8px 16px;background:#667eea;color:white;border:none;border-radius:8px;cursor:pointer;margin-bottom:16px">🖨️ พิมพ์</button>
+    <table><thead><tr><th>#</th><th>เลขประจำตัว</th><th>ชื่อ-สกุล</th><th>วิชา</th><th>ครูผู้สอน</th><th>ปีการศึกษา</th><th>คะแนน</th></tr></thead>
+    <tbody>${rows.map((r,i)=>`<tr><td>${i+1}</td><td>${r.id}</td><td>${r.name}</td><td>${r.subject}</td><td>${r.teacher}</td><td>${r.year}</td><td>${r.score!==null?r.score+'/'+r.total:'รอตรวจ'}</td></tr>`).join('')}</tbody>
+    </table></body></html>`);
+  win.document.close();
+}
+
+// ── ADMIN PANEL ──────────────────────────────────────────
+function renderAdminPanel() {
+  document.getElementById('content').innerHTML=`<div style="display:flex;gap:16px;min-height:100%">
+    <div style="width:180px;background:#1a202c;border-radius:12px;padding:12px;flex-shrink:0;height:fit-content">
+      <div style="font-size:11px;text-transform:uppercase;color:#718096;padding:8px;letter-spacing:1px">Admin</div>
+      <button class="menu-btn ${ui.adminSub==='students'?'active':''}" onclick="ui.adminSub='students';renderAdminPanel()"><span class="icon">👥</span> จัดการนักเรียน</button>
+      <button class="menu-btn ${ui.adminSub==='exams'?'active':''}" onclick="ui.adminSub='exams';renderAdminPanel()"><span class="icon">📋</span> จัดการข้อสอบ</button>
+      <div style="border-top:1px solid rgba(255,255,255,0.1);margin:8px 0"></div>
+      <button class="menu-btn" onclick="ui.adminLoggedIn=false;switchMenu('home')"><span class="icon">🏠</span> กลับหน้าแรก</button>
+    </div>
+    <div style="flex:1" id="adminContent">${loading()}</div>
+  </div>`;
+  if(ui.adminSub==='students') loadStudentManage();
+  else loadExamManage();
+}
+
+// ── STUDENT MANAGE ───────────────────────────────────────
+async function loadStudentManage() {
+  try {
+    const students = await sbGet('students','select=*&order=id');
+    window._adminStudents = students;
+    document.getElementById('adminContent').innerHTML=`<div class="card">
+      <div class="page-header"><div class="card-title" style="margin:0">👥 จัดการข้อมูลนักเรียน</div>
+        <button class="btn btn-primary btn-sm" onclick="showAddStudentModal()">+ เพิ่มนักเรียน</button></div>
+      <div class="table-wrap" style="margin-top:16px"><table>
+        <thead><tr><th>#</th><th>เลขประจำตัว</th><th>ชื่อ-สกุล</th><th>ชั้น</th><th>จัดการ</th></tr></thead>
+        <tbody>${students.map((s,i)=>`<tr>
+          <td>${i+1}</td><td><span class="badge badge-blue">${s.id}</span></td><td>${s.name}</td><td><span class="badge badge-green">${s.student_class}</span></td>
+          <td><div class="flex gap-2">
+            <button class="btn btn-sm btn-outline" onclick="showEditStudentModal('${s.id}')">แก้ไข</button>
+            <button class="btn btn-sm btn-danger" onclick="deleteStudent('${s.id}')">ลบ</button>
+          </div></td></tr>`).join('')}</tbody>
+      </table></div>
+    </div>`;
+  } catch(e) { document.getElementById('adminContent').innerHTML=`<p class="text-gray">โหลดไม่สำเร็จ: ${e.message}</p>`; }
+}
+
+function showAddStudentModal() {
+  window._editStudentId = null;
+  showModal('เพิ่มนักเรียน',`
+    <div class="form-group"><label>เลขประจำตัว</label><input id="st_id" placeholder="เช่น 013"></div>
+    <div class="form-group"><label>ชื่อ-สกุล</label><input id="st_name" placeholder="ชื่อ-สกุล"></div>
+    <div class="form-group"><label>ชั้น</label><select id="st_class">${CLASSES.map(c=>`<option>${c}</option>`).join('')}</select></div>`,
+    'saveStudent');
+}
+
+function showEditStudentModal(id) {
+  const s=(window._adminStudents||[]).find(x=>x.id===id); if(!s) return;
+  window._editStudentId = id;
+  showModal('แก้ไขนักเรียน',`
+    <div class="form-group"><label>เลขประจำตัว</label><input id="st_id" value="${s.id}"></div>
+    <div class="form-group"><label>ชื่อ-สกุล</label><input id="st_name" value="${s.name}"></div>
+    <div class="form-group"><label>ชั้น</label><select id="st_class">${CLASSES.map(c=>`<option ${c===s.student_class?'selected':''}>${c}</option>`).join('')}</select></div>`,
+    'saveStudent');
+}
+
+async function saveStudent() {
+  const id=document.getElementById('st_id').value.trim();
+  const name=document.getElementById('st_name').value.trim();
+  const student_class=document.getElementById('st_class').value;
+  if(!id||!name){toast('กรุณากรอกข้อมูลให้ครบ','error');return;}
+  try {
+    if(window._editStudentId) {
+      await sbUpdate('students',`id=eq.${window._editStudentId}`,{id,name,student_class});
+    } else {
+      await sbInsert('students',{id,name,student_class});
+    }
+    window._editStudentId=null;
+    toast('บันทึกแล้ว ✅'); closeModal(); loadStudentManage();
+  } catch(e) { toast('บันทึกไม่สำเร็จ: '+e.message,'error'); }
+}
+
+async function deleteStudent(id) {
+  if(!confirm('ต้องการลบนักเรียนคนนี้?')) return;
+  try { await sbDelete('students',`id=eq.${id}`); toast('ลบแล้ว'); loadStudentManage(); }
+  catch(e) { toast('ลบไม่สำเร็จ: '+e.message,'error'); }
+}
+
+// ── EXAM MANAGE ──────────────────────────────────────────
+async function loadExamManage() {
+  try {
+    const exams=await sbGet('exams','select=*&order=created_at.desc');
+    window._adminExams=exams;
+    document.getElementById('adminContent').innerHTML=`<div class="card">
+      <div class="page-header"><div class="card-title" style="margin:0">📋 จัดการข้อสอบ</div>
+        <button class="btn btn-primary btn-sm" onclick="showAddExamModal()">+ สร้างชุดข้อสอบ</button></div>
+      <div class="table-wrap" style="margin-top:16px"><table>
+        <thead><tr><th>ชุดที่</th><th>วิชา</th><th>ครูผู้สอน</th><th>ชั้น</th><th>ปีการศึกษา</th><th>จำนวนข้อ</th><th>สถานะ</th><th>จัดการ</th></tr></thead>
+        <tbody>${exams.map((e,i)=>`<tr>
+          <td>${i+1}</td><td>${e.subject}</td><td>${e.teacher}</td><td>${e.class}</td><td>${e.year}</td><td>${(e.questions||[]).length}</td>
+          <td><span class="badge ${e.approved?'badge-green':'badge-orange'}">${e.approved?'อนุมัติ':'รออนุมัติ'}</span></td>
+          <td><div class="flex gap-2">
+            <button class="btn btn-sm btn-outline" onclick="editExam('${e.id}')">แก้ไข</button>
+            <button class="btn btn-sm ${e.approved?'btn-danger':'btn-success'}" onclick="toggleApprove('${e.id}',${!e.approved})">${e.approved?'ยกเลิก':'อนุมัติ'}</button>
+            <button class="btn btn-sm btn-danger" onclick="deleteExam('${e.id}')">ลบ</button>
+          </div></td></tr>`).join('')}
+        </tbody>
+      </table></div>
+    </div>`;
+  } catch(e) { document.getElementById('adminContent').innerHTML=`<p class="text-gray">โหลดไม่สำเร็จ: ${e.message}</p>`; }
+}
+
+async function toggleApprove(id,val) {
+  try { await sbUpdate('exams',`id=eq.${id}`,{approved:val}); toast(val?'อนุมัติแล้ว ✅':'ยกเลิกแล้ว'); loadExamManage(); }
+  catch(e) { toast('อัปเดตไม่สำเร็จ','error'); }
+}
+
+async function deleteExam(id) {
+  if(!confirm('ต้องการลบชุดข้อสอบนี้?')) return;
+  try { await sbDelete('exams',`id=eq.${id}`); toast('ลบแล้ว'); loadExamManage(); }
+  catch(e) { toast('ลบไม่สำเร็จ','error'); }
+}
+
+async function editExam(id) {
+  const rows=await sbGet('exams',`id=eq.${id}&limit=1`);
+  if(!rows.length) return;
+  window._editExam={...rows[0]};
+  showExamEditor();
+}
+
+function showAddExamModal() {
+  window._editExam={id:null,subject:'',teacher:'',class:'ป.1',year:'2568',time:30,approved:false,questions:[]};
+  showExamEditor();
+}
+
+function showExamEditor() {
+  const e=window._editExam;
+  document.getElementById('adminContent').innerHTML=`<div class="card">
+    <div class="page-header">
+      <h2>${e.id?'แก้ไขข้อสอบ: '+e.subject:'สร้างชุดข้อสอบใหม่'}</h2>
+      <button class="btn btn-outline btn-sm" onclick="ui.adminSub='exams';renderAdminPanel()">← ยกเลิก</button>
+    </div>
+    <div style="background:#f7fafc;border-radius:8px;padding:16px;margin-bottom:20px">
+      <div class="card-title">ส่วนที่ 1: ข้อมูลผู้ออกข้อสอบ</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="form-group"><label>วิชา</label><input id="ex_subject" value="${e.subject}" placeholder="เช่น คณิตศาสตร์"></div>
+        <div class="form-group"><label>ครูผู้สอน</label><input id="ex_teacher" value="${e.teacher}"></div>
+        <div class="form-group"><label>ระดับชั้น</label><select id="ex_class">${CLASSES.map(c=>`<option ${c===e.class?'selected':''}>${c}</option>`).join('')}</select></div>
+        <div class="form-group"><label>ปีการศึกษา</label><input id="ex_year" value="${e.year}"></div>
+        <div class="form-group"><label>เวลาสอบ (นาที)</label><input type="number" id="ex_time" value="${e.time}" min="1"></div>
+      </div>
+    </div>
+    <div>
+      <div class="page-header">
+        <div class="card-title" style="margin:0">ส่วนที่ 2: ข้อสอบ (${(e.questions||[]).length} ข้อ)</div>
+        <button class="btn btn-success btn-sm" onclick="addQuestion()">+ เพิ่มข้อ</button>
+      </div>
+      <div id="qContainer">${renderQEditor(e.questions||[])}</div>
+    </div>
+    <div style="margin-top:20px;text-align:right">
+      <button class="btn btn-primary" onclick="saveExam()">💾 บันทึกข้อสอบ</button>
+    </div>
+  </div>`;
+}
+
+function renderQEditor(qs) {
+  if(!qs.length) return `<div class="text-center text-gray" style="padding:20px">ยังไม่มีข้อสอบ กด "+ เพิ่มข้อ"</div>`;
+  return qs.map((q,i)=>`<div style="background:#f7fafc;border-radius:10px;padding:14px;margin-bottom:12px;border-left:3px solid #667eea">
+    <div style="display:flex;justify-content:space-between;margin-bottom:8px">
+      <span style="font-weight:700;color:#667eea">ข้อที่ ${i+1}</span>
+      <button class="btn btn-sm btn-danger" onclick="removeQuestion(${i})">ลบ</button>
+    </div>
+    <div class="form-group"><label>คำถาม</label><textarea id="qt_${i}" rows="2">${q.text||''}</textarea></div>
+    <div class="form-group"><label>รูปภาพ (ไม่บังคับ)</label>
+      <input type="file" accept="image/*" onchange="handleQImg(event,${i})">
+      ${q.image?`<img src="${q.image}" style="max-width:200px;margin-top:6px;border-radius:6px;display:block">`:''}
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      ${[0,1,2,3].map(j=>`<div class="form-group"><label>ตัวเลือก ${'กขคง'[j]}</label><input id="qc${j}_${i}" value="${q.choices?.[j]||''}"></div>`).join('')}
+    </div>
+    <div class="form-group"><label>เฉลย</label>
+      <select id="qa_${i}">${[0,1,2,3].map(j=>`<option value="${j}" ${q.answer===j?'selected':''}>${'กขคง'[j]}</option>`).join('')}</select>
+    </div>
+  </div>`).join('');
+}
+
+function syncExamFromDOM() {
+  const e=window._editExam; if(!e) return;
+  e.subject=document.getElementById('ex_subject')?.value||e.subject;
+  e.teacher=document.getElementById('ex_teacher')?.value||e.teacher;
+  e.class=document.getElementById('ex_class')?.value||e.class;
+  e.year=document.getElementById('ex_year')?.value||e.year;
+  e.time=parseInt(document.getElementById('ex_time')?.value||e.time);
+  (e.questions||[]).forEach((q,i)=>{
+    q.text=document.getElementById(`qt_${i}`)?.value||q.text;
+    q.choices=[0,1,2,3].map(j=>document.getElementById(`qc${j}_${i}`)?.value||'');
+    q.answer=parseInt(document.getElementById(`qa_${i}`)?.value||'0');
+  });
+}
+
+function addQuestion() { syncExamFromDOM(); window._editExam.questions.push({text:'',choices:['','','',''],answer:0,image:null}); showExamEditor(); }
+function removeQuestion(i) { syncExamFromDOM(); window._editExam.questions.splice(i,1); showExamEditor(); }
+function handleQImg(evt,i) {
+  const file=evt.target.files[0]; if(!file) return;
+  const r=new FileReader();
+  r.onload=e=>{syncExamFromDOM();window._editExam.questions[i].image=e.target.result;showExamEditor();};
+  r.readAsDataURL(file);
+}
+
+async function saveExam() {
+  syncExamFromDOM();
+  const e=window._editExam;
+  if(!e.subject||!e.teacher){toast('กรุณากรอกวิชาและครูผู้สอน','error');return;}
+  try {
+    if(e.id) {
+      await sbUpdate('exams',`id=eq.${e.id}`,{subject:e.subject,teacher:e.teacher,class:e.class,year:e.year,time:e.time,questions:e.questions});
+    } else {
+      await sbInsert('exams',{id:'e_'+Date.now(),subject:e.subject,teacher:e.teacher,class:e.class,year:e.year,time:e.time,questions:e.questions,approved:false});
+    }
+    toast('บันทึกข้อสอบแล้ว ✅'); window._editExam=null; ui.adminSub='exams'; renderAdminPanel();
+  } catch(e) { toast('บันทึกไม่สำเร็จ: '+e.message,'error'); }
+}
+
+// ── MODAL ────────────────────────────────────────────────
+function showModal(title, body, saveFn, width) {
+  document.getElementById('modalContainer').innerHTML=`<div class="modal-overlay" onclick="if(event.target===this)closeModal()">
+    <div class="modal" style="${width?'width:'+width+'px':''}">
+      <h3>${title}</h3><div>${body}</div>
+      ${saveFn?`<div class="modal-footer"><button class="btn btn-outline" onclick="closeModal()">ยกเลิก</button><button class="btn btn-primary" onclick="${saveFn}()">บันทึก</button></div>`:''}
+    </div></div>`;
+}
+function closeModal(){document.getElementById('modalContainer').innerHTML='';}
+
+// ── INIT ─────────────────────────────────────────────────
+renderContent();
+</script>
+</body>
+</html>
